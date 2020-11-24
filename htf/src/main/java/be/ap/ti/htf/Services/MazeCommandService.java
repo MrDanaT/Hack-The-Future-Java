@@ -2,6 +2,7 @@ package be.ap.ti.htf.Services;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.math.BigInteger;
 
 import org.springframework.stereotype.Service;

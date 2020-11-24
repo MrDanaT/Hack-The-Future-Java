@@ -2,6 +2,7 @@ package be.ap.ti.htf.Controllers;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -40,24 +41,54 @@ public class HomeController {
             MazeDto maze = restTemplate.getForObject(BASE_URL + "?teamId=f7858567-7db4-4c9c-9d32-77e563393644",
                     MazeDto.class);
 
-            System.out.println("Mazes...\n" + maze.getCells());
             if (maze.getCells().size() == 4) {
 
-                for (MazeCellDto iterable_element : maze.getCells()) {
+                int xy = 0;
+                while (xy < 2) {
+                    String object = "{\"cells\"/ [";
+                    for (int i = 0; i < maze.getCells().size(); i++) {
+                        MazeCellDto iterable_element = maze.getCells().get(i);
+                         object += "{";
+                        String challenge = iterable_element.getChallenge();
+                        String challengeId = iterable_element.getChallengeId();
+                        String answer = null;
 
-                    var challenge = iterable_element.getChallenge();
-                    if (challenge == null) {
-                        continue;
+                        if (challenge.toLowerCase().contains("alphabetical")) {
+                            answer = _service.isAlphabetical(iterable_element.getChallengeParameters().toString());
+
+                        } else if (challenge.toLowerCase().contains("decode")) {
+                            answer = _service.decode(iterable_element.getChallengeParameters().toString());
+                        }
+
+                        if (answer != null && challengeId != null) {
+                            object += "\"challengeId\":" + challengeId + ",";
+                            object += "\"answer\":" + answer + ",";
+                            object += "\"x\":" + iterable_element.getX() + ",";
+                            object += "\"y\":" + iterable_element.getY();
+                        } else {
+                            if (xy == 0) {
+                                object += "\"x\":" + 0 + ",";
+                                object += "\"y\":" + 1;
+                            } else {
+                                object += "\"x\":" + 1 + ",";
+                                object += "\"y\":" + 0;
+                            }
+                        }
+
+                        object += "}";
+                        if (i < maze.getCells().size() - 1)
+                            object += ",";
+
+                        xy++;
+                        if (xy > 2) {
+                            xy = 0;
+                        }
                     }
-                    System.out.println(iterable_element);
-                    if (challenge.toLowerCase().contains("alphabetical")) {
-                        String result = _service.isAlphabetical(iterable_element.getChallengeParameters().toString());
-                        postSolution(maze.getMazeId(), result, iterable_element.getChallengeId());
-                    } else if (challenge.toLowerCase().contains("decode")) {
-                        String result = _service.decode(iterable_element.getChallengeParameters().toString());
-                        postSolution(maze.getMazeId(), result, iterable_element.getChallengeId());
-                    }
+                    object += "]}";
+
+                    postSolution(maze.getMazeId(), object);
                 }
+
             }
 
         } catch (Exception e) {
@@ -66,15 +97,12 @@ public class HomeController {
 
     }
 
-    private void postSolution(String mazeId, String solution, String challengeId) {
+    private void postSolution(String mazeId, String solution) {
 
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         headers.setContentType(APPLICATION_JSON);
 
-        String answer = String.format("{\"answer\":" + solution + "\"challengeId\":" + challengeId + "\"x\":" + x + "\"y\":" + y);
-
-        
-        HttpEntity<String> entity = new HttpEntity<>(answer, headers);
+        HttpEntity<String> entity = new HttpEntity<>(solution, headers);
 
         MazeDto result = restTemplate.postForObject(BASE_URL + "/" + mazeId, entity, MazeDto.class);
 
